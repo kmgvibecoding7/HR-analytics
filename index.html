@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Аналитика оплаты труда</title>
+<style>
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#eef0f4;--text:#1a1f2b;--muted:#5d6676;--border:#dcdfe6;
+  --accent:#2f5fd0;--accent-soft:#e3eafb;--c1:#2f5fd0;--c2:#12a0a0;--c3:#e08a1e;--c4:#8a5bd6;
+  --crit:#c93232;--crit-bg:#fbe6e6;--warn:#b36b00;--warn-bg:#fdf0d9;--info:#2f5fd0;--info-bg:#e3eafb;--ok:#1a7f4b;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12151c;--surface:#1b2029;--surface2:#242a36;--text:#e6e9ef;--muted:#9aa3b2;--border:#2f3644;
+  --accent:#6b93f0;--accent-soft:#25304d;--c1:#6b93f0;--c2:#3cc4c4;--c3:#f0a84a;--c4:#a98bf0;
+  --crit:#f27b7b;--crit-bg:#3a2326;--warn:#f0b050;--warn-bg:#3a2f1c;--info:#6b93f0;--info-bg:#25304d;--ok:#4cc789;}}
+:root[data-theme="dark"]{
+  --bg:#12151c;--surface:#1b2029;--surface2:#242a36;--text:#e6e9ef;--muted:#9aa3b2;--border:#2f3644;
+  --accent:#6b93f0;--accent-soft:#25304d;--c1:#6b93f0;--c2:#3cc4c4;--c3:#f0a84a;--c4:#a98bf0;
+  --crit:#f27b7b;--crit-bg:#3a2326;--warn:#f0b050;--warn-bg:#3a2f1c;--info:#6b93f0;--info-bg:#25304d;--ok:#4cc789;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:12px;padding:12px 0;flex-wrap:wrap}
+h1{font-size:18px;margin:0;flex:1;min-width:200px}
+h1 small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
+nav button{white-space:nowrap}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.danger{color:var(--crit)}
+nav button{background:transparent;border-color:transparent}
+nav button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding:20px 0 60px}
+.tab{display:none}.tab.on{display:block}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card h2{font-size:15px;margin:0 0 12px}
+.kpi .v{font-size:22px;font-weight:700}.kpi .l{color:var(--muted);font-size:13px}
+.banner{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.muted{color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--surface2)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.row{display:grid;grid-template-columns:130px 1fr 110px;gap:10px;align-items:center;margin:7px 0;font-size:13px}
+.row .t{height:16px;background:var(--surface2);border-radius:4px;position:relative}
+.row .f{height:100%;border-radius:4px;background:var(--c1)}
+.row .val{text-align:right;font-variant-numeric:tabular-nums}
+.range{position:relative;height:16px;background:var(--surface2);border-radius:4px}
+.range b{position:absolute;top:0;height:100%;background:var(--c2);border-radius:4px;opacity:.55}
+.range u{position:absolute;top:-2px;height:20px;width:3px;background:var(--text);border-radius:2px}
+.hist{display:flex;align-items:flex-end;gap:4px;height:150px}
+.hist div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px;color:var(--muted)}
+.hist span{display:block;width:100%;background:var(--c1);border-radius:4px 4px 0 0;min-height:1px}
+.axis{display:flex;gap:4px;font-size:10px;color:var(--muted)}.axis div{flex:1;text-align:center;overflow:hidden}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+th{cursor:pointer;color:var(--muted);font-weight:600;user-select:none}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tfoot td{font-weight:700;background:var(--surface2)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input,select,textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;width:100%}
+.tools input,.tools select{width:auto;flex:1;min-width:140px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+label input,label select{margin-top:3px;color:var(--text)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
+.check{display:flex;gap:8px;align-items:center;margin-bottom:10px;color:var(--text)}.check input{width:auto;margin:0}
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.res div{background:var(--surface2);border-radius:8px;padding:10px}.res b{display:block;font-size:17px}.res span{font-size:12px;color:var(--muted)}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+.lvl-crit{background:var(--crit-bg);color:var(--crit)}.lvl-warn{background:var(--warn-bg);color:var(--warn)}.lvl-info{background:var(--info-bg);color:var(--info)}
+.issue{border-left:4px solid var(--border)}.issue.lvl-crit{border-left-color:var(--crit)}.issue.lvl-warn{border-left-color:var(--warn)}.issue.lvl-info{border-left-color:var(--info)}
+.issue ul{margin:8px 0 0;padding-left:20px;font-size:13.5px}
+.calcs{display:grid;gap:14px}
+dialog{border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);max-width:560px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:50}
+.toast.on{opacity:1}
+.empty{text-align:center;padding:40px 10px;color:var(--muted)}
+@media(max-width:520px){.row{grid-template-columns:90px 1fr 80px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <h1>Аналитика оплаты труда<small>Данные обрабатываются только в вашем браузере</small></h1>
+    <button id="themeBtn" aria-label="Сменить тему">Тема</button>
+  </div>
+  <nav role="tablist" id="nav"></nav>
+</div></header>
+
+<main class="wrap">
+  <div id="demoBanner" class="banner" hidden>Загружены демо-данные. Импортируйте свою таблицу на вкладке «Сотрудники».</div>
+
+  <section class="tab" id="t-overview"></section>
+
+  <section class="tab" id="t-staff">
+    <div class="tools">
+      <input id="q" type="search" placeholder="Поиск по ФИО и должности" aria-label="Поиск">
+      <select id="deptF" aria-label="Подразделение"></select>
+      <button class="primary" id="addBtn">+ Сотрудник</button>
+      <button id="impBtn">Импорт CSV / Excel</button>
+      <button id="expBtn">Экспорт CSV</button>
+      <button id="demoBtn">Демо-данные</button>
+      <button id="clrBtn" class="danger">Очистить всё</button>
+    </div>
+    <div class="card tbl" id="staffTbl"></div>
+  </section>
+
+  <section class="tab" id="t-checks"></section>
+
+  <section class="tab" id="t-calc">
+    <div class="calcs">
+      <div class="card" id="c-sal"></div>
+      <div class="card" id="c-vac"></div>
+      <div class="card" id="c-ot"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="t-params"></section>
+</main>
+
+<dialog id="empDlg"><form method="dialog" id="empForm"></form></dialog>
+<dialog id="impDlg">
+  <h2 style="margin-top:0">Импорт сотрудников</h2>
+  <p class="muted" style="font-size:13px">Вставьте таблицу из Excel или CSV (разделители <code>;</code> , или табуляция). Первая строка — заголовки: ФИО, Подразделение, Должность, Грейд, Оклад, Надбавки, Премия, Дата приёма, Пол.</p>
+  <textarea id="impText" rows="9" placeholder="ФИО;Подразделение;Должность;Грейд;Оклад;Надбавки;Премия;Дата приёма;Пол&#10;Иванов И.;Производство;Слесарь;Г2;58000;3000;6000;15.03.2021;М"></textarea>
+  <input type="file" id="impFile" accept=".csv,.txt,.tsv" style="margin-top:8px">
+  <div class="tools" style="margin-top:12px">
+    <button class="primary" id="impAdd">Добавить</button>
+    <button id="impRep" class="danger">Заменить все</button>
+    <button id="impCancel">Отмена</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+const KEY="hr_payroll_v1";
+const DEF_P={mrot:27093,coef:1,base:2979000,rIn:30,rOver:15.1,rSme1:30,rSme2:15,injury:0.2,
+  scale:[[2400000,13],[5000000,15],[20000000,18],[50000000,20],[1e15,22]],
+  compaLo:0.85,compaHi:1.15,spread:25,invert:10,gender:10};
+let S={emps:[],P:JSON.parse(JSON.stringify(DEF_P)),demo:false};
+let sortKey="name",sortDir=1;
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s);
+const fmt=n=>isFinite(n)?Math.round(n).toLocaleString("ru-RU")+" ₽":"—";
+const num=n=>isFinite(n)?Math.round(n).toLocaleString("ru-RU"):"—";
+const pct=n=>(Math.round(n*10)/10).toLocaleString("ru-RU")+"%";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const acc=e=>(+e.salary||0)+(+e.allow||0)+(+e.bonus||0);
+const uid=()=>Math.random().toString(36).slice(2,9);
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),2400)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Не удалось сохранить в браузере")}}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);S.emps=o.emps||[];S.P=Object.assign({},DEF_P,o.P||{});S.demo=!!o.demo;return true}}catch(e){}return false}
+
+/* ---------- tax / contribution math ---------- */
+function ndflCum(inc,P=S.P){let tax=0,prev=0;for(const[lim,r]of P.scale){if(inc>prev)tax+=(Math.min(inc,lim)-prev)*r/100;prev=lim}return tax}
+function contribCum(inc,P=S.P){return Math.min(inc,P.base)*P.rIn/100+Math.max(0,inc-P.base)*P.rOver/100}
+function contribSme(m,P=S.P){return Math.min(m,P.mrot)*P.rSme1/100+Math.max(0,m-P.mrot)*P.rSme2/100}
+function empCost(e){const a=acc(e);return a+contribCum(a*12)/12+a*S.P.injury/100}
+
+/* ---------- demo ---------- */
+function demoData(){
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const D={"Производство":[["Слесарь","Г2",58000],["Токарь","Г3",72000],["Мастер участка","Г4",95000]],
+    "Бухгалтерия":[["Бухгалтер","Г3",70000],["Главный бухгалтер","Г5",150000]],
+    "HR":[["Специалист по оплате труда","Г3",75000],["HR-менеджер","Г4",100000]],
+    "IT":[["Разработчик","Г4",160000],["Системный администратор","Г3",90000]],
+    "Продажи":[["Менеджер по продажам","Г3",80000],["Руководитель направления","Г5",170000]]};
+  const names=["Иванов","Петров","Сидоров","Кузнецова","Смирнова","Попов","Васильев","Соколова","Михайлов","Новикова","Фёдоров","Морозова","Волков","Алексеева","Лебедев","Семёнова","Егоров","Павлова","Козлов","Степанова","Николаев","Орлова","Андреев","Макарова","Захаров","Тихонова","Борисов","Жукова","Комаров","Крылова","Герасимов","Титова","Зайцев","Белова","Ильин","Гусева"];
+  const out=[];let i=0;
+  for(const[d,ps]of Object.entries(D))for(const[p,g,base]of ps){
+    const cnt=d==="Производство"?4:3;
+    for(let k=0;k<cnt;k++){
+      const nm=names[i%names.length],fem=/а$|я$/.test(nm);
+      const sal=Math.round(base*(0.88+rnd()*0.3)/500)*500;
+      out.push({id:uid(),name:nm+" "+String.fromCharCode(1040+(i*3)%26)+".",dept:d,pos:p,grade:g,salary:sal,
+        allow:Math.round(sal*rnd()*0.08/500)*500,bonus:Math.round(sal*rnd()*0.25/500)*500,
+        hired:`${2016+Math.floor(rnd()*9)}-0${1+Math.floor(rnd()*9)}-1${Math.floor(rnd()*9)}`,gender:fem?"Ж":"М"});
+      i++;
+    }
+  }
+  out[0].salary=21000;out[0].allow=0;out[0].bonus=7000;             // ниже МРОТ, добивается премией
+  out[1].salary=24000;out[1].allow=1000;out[1].bonus=9000;
+  out[2].allow=0;out[2].dept="";                                      // неполные данные
+  out[5].bonus=out[5].salary+5000;                                    // премия > оклада
+  return out;
+}
+
+/* ---------- tabs ---------- */
+const TABS=[["overview","Обзор"],["staff","Сотрудники"],["checks","Проверки"],["calc","Калькуляторы"],["params","Параметры"]];
+let cur="overview";
+function buildNav(){
+  $("#nav").innerHTML=TABS.map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${k===cur}">${l}</button>`).join("");
+  $("#nav").onclick=e=>{const b=e.target.closest("button");if(b){cur=b.dataset.t;show()}};
+}
+function show(){
+  buildNav();
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id==="t-"+cur));
+  $("#demoBanner").hidden=!S.demo;
+  ({overview:renderOverview,staff:renderStaff,checks:renderChecks,calc:()=>{},params:renderParams})[cur]();
+}
+
+/* ---------- overview ---------- */
+function bars(items,color){
+  const mx=Math.max(...items.map(i=>i.v),1);
+  return items.map(i=>`<div class="row"><span title="${esc(i.l)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.l)}</span><div class="t"><div class="f" style="width:${i.v/mx*100}%;${color?`background:${color}`:""}"></div></div><span class="val">${i.t}</span></div>`).join("");
+}
+function renderOverview(){
+  const E=S.emps,el=$("#t-overview");
+  if(!E.length){el.innerHTML=`<div class="card empty">Нет данных. Откройте вкладку «Сотрудники», чтобы загрузить таблицу или демо-данные.</div>`;return}
+  const A=E.map(acc),fot=sum(A),cost=sum(E.map(empCost));
+  const sal=sum(E.map(e=>+e.salary||0)),al=sum(E.map(e=>+e.allow||0)),bo=sum(E.map(e=>+e.bonus||0));
+  const kp=[["Численность",num(E.length)],["ФОТ в месяц",fmt(fot)],["Средняя начисленная",fmt(fot/E.length)],["Медиана",fmt(median(A))],["Затраты с взносами",fmt(cost)],["Доля премий",pct(bo/fot*100)]];
+  const parts=[["Оклады",sal,"var(--c1)"],["Надбавки",al,"var(--c2)"],["Премии",bo,"var(--c3)"]];
+  const depts=[...new Set(E.map(e=>e.dept||"Без подразделения"))].map(d=>{const g=E.filter(e=>(e.dept||"Без подразделения")===d);return{l:d,fot:sum(g.map(acc)),n:g.length}}).sort((a,b)=>b.fot-a.fot);
+  const grades=[...new Set(E.map(e=>e.grade).filter(Boolean))].sort().map(g=>{const s=E.filter(e=>e.grade===g).map(e=>+e.salary||0);return{g,min:Math.min(...s),max:Math.max(...s),med:median(s),n:s.length}});
+  const gmax=Math.max(...grades.map(g=>g.max),1);
+  const mn=Math.min(...A),mx=Math.max(...A),B=8,st=(mx-mn)/B||1,h=Array(B).fill(0);
+  A.forEach(a=>h[Math.min(B-1,Math.floor((a-mn)/st))]++);const hm=Math.max(...h);
+  const mm=median(E.filter(e=>e.gender==="М").map(acc)),mf=median(E.filter(e=>e.gender==="Ж").map(acc));
+  el.innerHTML=`
+  <div class="grid kpis">${kp.map(([l,v])=>`<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h2>Структура ФОТ</h2>
+      <div class="bar">${parts.map(([l,v,c])=>`<div style="width:${v/fot*100}%;background:${c}" title="${l}"></div>`).join("")}</div>
+      <div class="legend">${parts.map(([l,v,c])=>`<span><i style="background:${c}"></i>${l}: ${fmt(v)} (${pct(v/fot*100)})</span>`).join("")}</div></div>
+    <div class="card"><h2>Медиана начисленной: мужчины и женщины</h2>
+      ${mm||mf?bars([{l:"Мужчины",v:mm,t:fmt(mm)},{l:"Женщины",v:mf,t:fmt(mf)}],"var(--c4)"):`<p class="muted">Пол не указан</p>`}
+      ${mm&&mf?`<p class="muted" style="font-size:13px;margin:8px 0 0">Разрыв: ${pct((mm-mf)/Math.max(mm,mf)*100)}</p>`:""}</div>
+    <div class="card"><h2>ФОТ по подразделениям</h2>${bars(depts.map(d=>({l:d.l,v:d.fot,t:fmt(d.fot)})))}
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Средняя: ${depts.map(d=>`${esc(d.l)} — ${num(d.fot/d.n)}`).join(" · ")}</p></div>
+    <div class="card"><h2>Вилки окладов по грейдам</h2>
+      ${grades.length?grades.map(g=>`<div class="row"><span>${esc(g.g)} <small class="muted">(${g.n})</small></span><div class="range"><b style="left:${g.min/gmax*100}%;width:${Math.max(1,(g.max-g.min)/gmax*100)}%"></b><u style="left:${g.med/gmax*100}%"></u></div><span class="val" style="font-size:11px">${num(g.min)}–${num(g.max)}</span></div>`).join("")+`<p class="muted" style="font-size:12px;margin:8px 0 0">Полоса — мин…макс, чёрная метка — медиана</p>`:`<p class="muted">Грейды не указаны</p>`}</div>
+    <div class="card" style="grid-column:1/-1"><h2>Распределение начисленной суммы</h2>
+      <div class="hist">${h.map(c=>`<div>${c}<span style="height:${c/hm*100}%"></span></div>`).join("")}</div>
+      <div class="axis">${h.map((_,i)=>`<div>${num((mn+st*i)/1000)}к</div>`).join("")}</div></div>
+  </div>`;
+}
+
+/* ---------- staff ---------- */
+const COLS=[["name","ФИО"],["dept","Подразделение"],["pos","Должность"],["grade","Грейд"],["salary","Оклад",1],["allow","Надбавки",1],["bonus","Премия",1],["acc","Начислено",1],["hired","Принят"],["gender","Пол"]];
+function renderStaff(){
+  const depts=[...new Set(S.emps.map(e=>e.dept).filter(Boolean))].sort(),sel=$("#deptF"),old=sel.value;
+  sel.innerHTML=`<option value="">Все подразделения</option>`+depts.map(d=>`<option>${esc(d)}</option>`).join("");sel.value=depts.includes(old)?old:"";
+  const q=$("#q").value.trim().toLowerCase(),df=sel.value;
+  let L=S.emps.filter(e=>(!df||e.dept===df)&&(!q||(e.name+" "+e.pos).toLowerCase().includes(q)));
+  const val=e=>sortKey==="acc"?acc(e):e[sortKey];
+  L.sort((a,b)=>{const x=val(a),y=val(b);return(typeof x==="number"?x-y:String(x||"").localeCompare(String(y||""),"ru"))*sortDir});
+  if(!L.length){$("#staffTbl").innerHTML=`<div class="empty">Сотрудников нет</div>`;return}
+  const dt=d=>d?d.split("-").reverse().join("."):"";
+  $("#staffTbl").innerHTML=`<table><thead><tr>${COLS.map(([k,l,n])=>`<th class="${n?"n":""}" data-k="${k}">${l}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`).join("")}<th></th></tr></thead><tbody>
+  ${L.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.dept)}</td><td>${esc(e.pos)}</td><td>${esc(e.grade)}</td><td class="n">${num(e.salary)}</td><td class="n">${num(e.allow)}</td><td class="n">${num(e.bonus)}</td><td class="n">${num(acc(e))}</td><td>${dt(e.hired)}</td><td>${esc(e.gender)}</td><td><button data-edit="${e.id}">Правка</button> <button class="danger" data-del="${e.id}" aria-label="Удалить">✕</button></td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="4">Итого: ${L.length}</td><td class="n">${num(sum(L.map(e=>+e.salary||0)))}</td><td class="n">${num(sum(L.map(e=>+e.allow||0)))}</td><td class="n">${num(sum(L.map(e=>+e.bonus||0)))}</td><td class="n">${num(sum(L.map(acc)))}</td><td colspan="3"></td></tr></tfoot></table>`;
+}
+$("#staffTbl").onclick=e=>{
+  const th=e.target.closest("th");if(th){const k=th.dataset.k;sortDir=sortKey===k?-sortDir:1;sortKey=k;renderStaff();return}
+  const ed=e.target.closest("[data-edit]");if(ed)return openEmp(ed.dataset.edit);
+  const dl=e.target.closest("[data-del]");if(dl&&confirm("Удалить сотрудника?")){S.emps=S.emps.filter(x=>x.id!==dl.dataset.del);save();renderStaff()}
+};
+$("#q").oninput=renderStaff;$("#deptF").onchange=renderStaff;
+
+function openEmp(id){
+  const e=S.emps.find(x=>x.id===id)||{id:"",name:"",dept:"",pos:"",grade:"",salary:"",allow:0,bonus:0,hired:"",gender:""};
+  const f=(n,l,t="text",x="")=>`<label>${l}<input name="${n}" type="${t}" value="${esc(e[n])}" ${x}></label>`;
+  $("#empForm").innerHTML=`<h2 style="margin-top:0">${id?"Правка сотрудника":"Новый сотрудник"}</h2><div class="form">
+   ${f("name","ФИО","text","required")}${f("dept","Подразделение")}${f("pos","Должность")}${f("grade","Грейд")}
+   ${f("salary","Оклад, ₽","number",'min="0" step="any" required')}${f("allow","Надбавки, ₽","number",'min="0" step="any"')}${f("bonus","Премия, ₽","number",'min="0" step="any"')}
+   ${f("hired","Дата приёма","date")}
+   <label>Пол<select name="gender">${["","М","Ж"].map(g=>`<option ${e.gender===g?"selected":""}>${g}</option>`).join("")}</select></label></div>
+   <div class="tools"><button class="primary" value="ok">Сохранить</button><button value="cancel" formnovalidate>Отмена</button></div>`;
+  const dlg=$("#empDlg");dlg.dataset.id=id||"";dlg.showModal();
+}
+$("#empForm").onsubmit=ev=>{
+  if(ev.submitter?.value!=="ok")return;
+  const fd=Object.fromEntries(new FormData(ev.target)),id=$("#empDlg").dataset.id;
+  const rec={name:fd.name.trim(),dept:fd.dept.trim(),pos:fd.pos.trim(),grade:fd.grade.trim(),salary:+fd.salary||0,allow:+fd.allow||0,bonus:+fd.bonus||0,hired:fd.hired,gender:fd.gender};
+  if(id)Object.assign(S.emps.find(x=>x.id===id),rec);else S.emps.push({id:uid(),...rec});
+  S.demo=false;save();show();
+};
+$("#addBtn").onclick=()=>openEmp("");
+
+/* ---------- import / export ---------- */
+const SYN={name:["фио","имя","сотрудник","name"],dept:["подразделение","отдел","департамент","dept"],pos:["должность","позиция","position"],grade:["грейд","разряд","grade"],
+  salary:["оклад","зарплата","salary"],allow:["надбавки","надбавка","доплаты","allow"],bonus:["премия","бонус","bonus"],hired:["дата приёма","дата приема","принят","hired","дата найма"],gender:["пол","gender"]};
+function parseCSV(txt){
+  const first=txt.split(/\r?\n/)[0]||"",cands=["\t",";",","],d=cands.sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let r=[],c="",q=false;
+  for(let i=0;i<txt.length;i++){const ch=txt[i];
+    if(q){if(ch==='"'){if(txt[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true;else if(ch===d){r.push(c);c=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&txt[i+1]==="\n")i++;r.push(c);c="";if(r.some(x=>x.trim()))rows.push(r);r=[]}
+    else c+=ch}
+  r.push(c);if(r.some(x=>x.trim()))rows.push(r);return rows;
+}
+const toNum=s=>+String(s||"").replace(/[\s ₽]/g,"").replace(",",".")||0;
+function toDate(s){s=(s||"").trim();let m=s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);if(m)return`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;return/^\d{4}-\d{2}-\d{2}$/.test(s)?s:""}
+function importRows(txt){
+  const rows=parseCSV(txt);if(rows.length<2)throw new Error("Нужна строка заголовков и хотя бы одна строка данных");
+  const head=rows[0].map(h=>h.trim().toLowerCase()),idx={};
+  for(const[k,syn]of Object.entries(SYN))idx[k]=head.findIndex(h=>syn.includes(h));
+  if(idx.name<0||idx.salary<0)throw new Error("Не найдены обязательные столбцы «ФИО» и «Оклад»");
+  const g=(r,k)=>idx[k]>=0?(r[idx[k]]||"").trim():"";
+  return rows.slice(1).map(r=>({id:uid(),name:g(r,"name"),dept:g(r,"dept"),pos:g(r,"pos"),grade:g(r,"grade"),salary:toNum(g(r,"salary")),allow:toNum(g(r,"allow")),bonus:toNum(g(r,"bonus")),
+    hired:toDate(g(r,"hired")),gender:/^(м|m)/i.test(g(r,"gender"))?"М":/^(ж|f)/i.test(g(r,"gender"))?"Ж":""})).filter(e=>e.name);
+}
+function doImport(replace){
+  try{
+    const L=importRows($("#impText").value);
+    if(replace&&!confirm("Заменить все текущие данные?"))return;
+    S.emps=replace?L:S.emps.concat(L);S.demo=false;save();$("#impDlg").close();$("#impText").value="";toast(`Загружено: ${L.length}`);show();
+  }catch(e){toast("Ошибка: "+e.message)}
+}
+$("#impBtn").onclick=()=>$("#impDlg").showModal();
+$("#impCancel").onclick=()=>$("#impDlg").close();
+$("#impAdd").onclick=()=>doImport(false);$("#impRep").onclick=()=>doImport(true);
+$("#impFile").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>$("#impText").value=t)};
+$("#expBtn").onclick=()=>{
+  const csv="ФИО;Подразделение;Должность;Грейд;Оклад;Надбавки;Премия;Дата приёма;Пол\n"+S.emps.map(e=>[e.name,e.dept,e.pos,e.grade,e.salary,e.allow,e.bonus,e.hired?e.hired.split("-").reverse().join("."):"",e.gender].map(v=>/[;"\n]/.test(v)?`"${String(v).replace(/"/g,'""')}"`:v).join(";")).join("\n");
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv"}));a.download="employees.csv";a.click()}
+  catch(e){navigator.clipboard?.writeText(csv);toast("Скопировано в буфер")}
+};
+$("#demoBtn").onclick=()=>{if(S.emps.length&&!confirm("Заменить текущие данные демо-данными?"))return;S.emps=demoData();S.demo=true;save();show()};
+$("#clrBtn").onclick=()=>{if(confirm("Удалить всех сотрудников и сбросить параметры?")){S.emps=[];S.P=JSON.parse(JSON.stringify(DEF_P));S.demo=false;save();show()}};
+
+/* ---------- checks ---------- */
+function runChecks(){
+  const E=S.emps,P=S.P,out=[],min=P.mrot*P.coef,nm=e=>e.name||"(без имени)";
+  const add=(level,title,desc,items)=>items.length&&out.push({level,title,desc,items});
+  add("crit","Начислено меньше МРОТ",`Порог: ${fmt(min)} (МРОТ × районный коэффициент)`,E.filter(e=>acc(e)<min).map(e=>`${nm(e)} — ${fmt(acc(e))}`));
+  add("warn","Оклад и надбавки ниже МРОТ, итог добит премией","Гарантированная часть не достигает МРОТ",E.filter(e=>(+e.salary||0)+(+e.allow||0)<min&&acc(e)>=min).map(e=>`${nm(e)} — оклад+надбавки ${fmt((+e.salary||0)+(+e.allow||0))}, с премией ${fmt(acc(e))}`));
+  const by=k=>{const m={};E.forEach(e=>e[k]&&(m[e[k]]=m[e[k]]||[]).push(e));return m};
+  const cr=[];for(const[g,L]of Object.entries(by("grade"))){if(L.length<3)continue;const md=median(L.map(e=>+e.salary||0));L.forEach(e=>{const r=e.salary/md;if(r<P.compaLo||r>P.compaHi)cr.push(`${nm(e)} (${g}) — compa-ratio ${r.toFixed(2).replace(".",",")}`)})}
+  add("warn","Compa-ratio вне диапазона",`Допустимо ${P.compaLo}–${P.compaHi} от медианы окладов грейда (грейды от 3 человек)`,cr);
+  const sp=[];for(const[p,L]of Object.entries(by("pos"))){if(L.length<3)continue;const s=L.map(e=>+e.salary||0),md=median(s),v=(Math.max(...s)-Math.min(...s))/md*100;if(v>P.spread)sp.push(`${p} — разброс ${pct(v)} (${num(Math.min(...s))}–${num(Math.max(...s))})`)}
+  add("warn","Большой разброс окладов на должности",`Порог: ${P.spread}% от медианы (должности от 3 человек)`,sp);
+  const inv=[];E.forEach(e=>{if(!e.pos||!e.hired)return;const y=new Date(e.hired);y.setFullYear(y.getFullYear()-1);const old=E.filter(o=>o!==e&&o.pos===e.pos&&o.hired&&new Date(o.hired)<=y);if(old.length<2)return;const md=median(old.map(o=>+o.salary||0));if(e.salary>md*(1+P.invert/100))inv.push(`${nm(e)} (${e.pos}) — оклад ${num(e.salary)} при медиане опытных коллег ${num(md)}`)});
+  add("warn","Инверсия: новичок получает больше стажистов",`Оклад выше медианы коллег, работающих на год и более дольше, более чем на ${P.invert}%`,inv);
+  const gp=[];for(const[g,L]of Object.entries(by("grade"))){const m=L.filter(e=>e.gender==="М"),f=L.filter(e=>e.gender==="Ж");if(m.length<2||f.length<2)continue;const a=median(m.map(e=>+e.salary||0)),b=median(f.map(e=>+e.salary||0)),gap=(a-b)/Math.max(a,b)*100;if(Math.abs(gap)>P.gender)gp.push(`${g} — разрыв ${pct(gap)} (М ${num(a)}, Ж ${num(b)})`)}
+  add("warn","Гендерный разрыв внутри грейда",`Порог: ${P.gender}% по медианам окладов (минимум 2 человека каждого пола)`,gp);
+  add("info","Неполные данные","Не указаны подразделение, должность или оклад",E.filter(e=>!e.dept||!e.pos||!e.salary).map(e=>`${nm(e)} — не хватает: ${[!e.dept&&"подразделения",!e.pos&&"должности",!e.salary&&"оклада"].filter(Boolean).join(", ")}`));
+  add("info","Премия больше оклада","Информационное замечание",E.filter(e=>e.bonus>e.salary&&e.salary>0).map(e=>`${nm(e)} — премия ${fmt(e.bonus)} при окладе ${fmt(e.salary)}`));
+  return out;
+}
+const LV={crit:"Критично",warn:"Проверить",info:"К сведению"};
+function renderChecks(){
+  const el=$("#t-checks");
+  if(!S.emps.length){el.innerHTML=`<div class="card empty">Нет данных для проверок.</div>`;return}
+  const R=runChecks();
+  window._report="Отчёт по проверкам оплаты труда\n\n"+R.map(r=>`[${LV[r.level]}] ${r.title}\n${r.desc}\n`+r.items.map(i=>"  • "+i).join("\n")).join("\n\n");
+  el.innerHTML=`<div class="tools"><div class="muted" style="flex:1;align-self:center">Результаты — «к проверке», а не юридическое заключение. Пороги меняются на вкладке «Параметры».</div><button id="cpRep">Копировать отчёт</button></div>`+
+  (R.length?R.map(r=>`<div class="card issue lvl-${r.level}" style="margin-bottom:12px;background:var(--surface)"><span class="tag lvl-${r.level}">${LV[r.level]}</span> <b>${esc(r.title)}</b> <span class="muted">· ${r.items.length}</span><div class="muted" style="font-size:13px">${esc(r.desc)}</div><ul>${r.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`).join(""):`<div class="card empty" style="color:var(--ok)">Отклонений не найдено</div>`);
+  const b=$("#cpRep");if(b)b.onclick=()=>{navigator.clipboard?.writeText(window._report).then(()=>toast("Отчёт скопирован"),()=>toast("Не удалось скопировать"))};
+}
+
+/* ---------- calculators ---------- */
+const fld=(id,l,v,t="number",x='step="any" min="0"')=>`<label>${l}<input id="${id}" type="${t}" value="${v}" ${x}></label>`;
+const R=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
+function initCalcs(){
+  $("#c-sal").innerHTML=`<h2>Зарплата и налоги</h2><div class="form">
+    ${fld("s_sal","Оклад, ₽",100000)}${fld("s_al","Надбавки, ₽",0)}${fld("s_bo","Премия, ₽",0)}${fld("s_net","Желаемая сумма на руки (необяз.)","")}${fld("s_m","Месяцев с начала года (1–12)",12,"number",'min="1" max="12"')}</div>
+    <label class="check"><input type="checkbox" id="s_nr">Нерезидент (30%)</label><label class="check"><input type="checkbox" id="s_sme">Работодатель — МСП (льготные взносы)</label>
+    <div id="s_out"></div>`;
+  $("#c-vac").innerHTML=`<h2>Отпускные</h2><div class="form">
+    ${fld("v_inc","Доход за 12 месяцев, ₽",1200000)}${fld("v_full","Полных месяцев",12,"number",'min="0" max="12"')}${fld("v_part","Неполные месяцы («отработано/дней в месяце», через запятую)","","text","")}${fld("v_days","Дни отпуска",14)}${fld("v_ytd","Доход с начала года, ₽",0)}</div><div id="v_out"></div>`;
+  $("#c-ot").innerHTML=`<h2>Сверхурочные</h2><div class="form">
+    ${fld("o_earn","Заработок за месяц, ₽",100000)}${fld("o_norm","Норма часов в месяце",168)}${fld("o_h1","Часы: первые 2 в день",4)}${fld("o_h2","Часы: свыше 2 в день",2)}${fld("o_k1","Коэффициент 1",1.5)}${fld("o_k2","Коэффициент 2",2)}</div><div id="o_out"></div>`;
+  ["c-sal","c-vac","c-ot"].forEach(id=>$("#"+id).addEventListener("input",calc));calc();
+}
+const v=id=>+($("#"+id).value)||0;
+function calc(){
+  /* salary */
+  const P=S.P,nr=$("#s_nr").checked,sme=$("#s_sme").checked,n=Math.min(12,Math.max(1,Math.round(v("s_m"))));
+  let G=v("s_sal")+v("s_al")+v("s_bo");
+  if(v("s_net")>0)G=v("s_net")/(1-(nr?30:P.scale[0][1])/100);
+  const nd=c=>nr?c*0.3:ndflCum(c);let rows="",tN=0,tC=0,tI=0,tX=0,prevN=0,prevC=0;
+  for(let i=1;i<=n;i++){
+    const x=Math.round(nd(G*i))-prevN;prevN+=x;
+    const c=sme?contribSme(G):contribCum(G*i)-prevC;if(!sme)prevC+=c;
+    const inj=G*P.injury/100,net=G-x;tN+=x;tC+=c;tI+=inj;tX+=net;
+    rows+=`<tr><td>${i}</td><td class="n">${num(G)}</td><td class="n">${num(x)}</td><td class="n">${num(net)}</td><td class="n">${num(c)}</td><td class="n">${num(inj)}</td><td class="n">${num(G+c+inj)}</td></tr>`;
+  }
+  const warn=G<P.mrot*P.coef?`<div class="banner" style="margin-top:10px">Начислено ${fmt(G)} меньше МРОТ с коэффициентом (${fmt(P.mrot*P.coef)})</div>`:"";
+  $("#s_out").innerHTML=`<div class="res">${R("Начислено в месяц",fmt(G))}${R("НДФЛ за период",fmt(tN))}${R("На руки за период",fmt(tX))}${R("Взносы работодателя",fmt(tC))}${R("Травматизм",fmt(tI))}${R("Затраты работодателя",fmt(G*n+tC+tI))}</div>${warn}
+   <div class="tbl"><table><thead><tr><th>Мес.</th><th class="n">Начислено</th><th class="n">НДФЛ</th><th class="n">На руки</th><th class="n">Взносы</th><th class="n">Травматизм</th><th class="n">Затраты</th></tr></thead><tbody>${rows}</tbody>
+   <tfoot><tr><td>Итого</td><td class="n">${num(G*n)}</td><td class="n">${num(tN)}</td><td class="n">${num(tX)}</td><td class="n">${num(tC)}</td><td class="n">${num(tI)}</td><td class="n">${num(G*n+tC+tI)}</td></tr></tfoot></table></div>`;
+  /* vacation */
+  let days=v("v_full")*29.3;
+  ($("#v_part").value||"").split(",").forEach(s=>{const m=s.trim().match(/^([\d.,]+)\s*\/\s*([\d.,]+)$/);if(m){const a=+m[1].replace(",","."),b=+m[2].replace(",",".");if(b>0)days+=a/b*29.3}});
+  const avg=days>0?v("v_inc")/days:0,pay=avg*v("v_days"),ytd=v("v_ytd"),tax=Math.round(ndflCum(ytd+pay))-Math.round(ndflCum(ytd));
+  $("#v_out").innerHTML=`<div class="res">${R("Расчётных дней",days.toFixed(2).replace(".",","))}${R("Средний дневной",fmt(avg))}${R("Начислено",fmt(pay))}${R("НДФЛ",fmt(tax))}${R("К выплате",fmt(pay-tax))}</div>`;
+  /* overtime */
+  const rate=v("o_norm")>0?v("o_earn")/v("o_norm"):0,a=rate*v("o_k1")*v("o_h1"),b=rate*v("o_k2")*v("o_h2");
+  $("#o_out").innerHTML=`<div class="res">${R("Часовая ставка",fmt(rate))}${R("Первые часы",fmt(a))}${R("Последующие часы",fmt(b))}${R("Итого сверхурочные",fmt(a+b))}</div>`;
+}
+
+/* ---------- params ---------- */
+function renderParams(){
+  const P=S.P,f=(k,l,st="any")=>`<label>${l}<input data-p="${k}" type="number" step="${st}" value="${P[k]}"></label>`;
+  $("#t-params").innerHTML=`<div class="banner">Значения по умолчанию могут устареть. Сверьте МРОТ, тарифы и базу взносов с действующим законодательством.</div>
+  <div class="grid two">
+   <div class="card"><h2>Базовые значения</h2><div class="form">${f("mrot","МРОТ, ₽")}${f("coef","Районный коэффициент")}${f("base","Предельная база взносов, ₽")}${f("injury","Травматизм, %")}</div></div>
+   <div class="card"><h2>Тарифы взносов, %</h2><div class="form">${f("rIn","В пределах базы")}${f("rOver","Свыше базы")}${f("rSme1","МСП: до МРОТ")}${f("rSme2","МСП: свыше МРОТ")}</div></div>
+   <div class="card"><h2>Шкала НДФЛ</h2>${P.scale.map((s,i)=>`<div class="form"><label>До, ₽<input data-sc="${i}-0" type="number" value="${s[0]>=1e15?1e15:s[0]}"></label><label>Ставка, %<input data-sc="${i}-1" type="number" step="any" value="${s[1]}"></label></div>`).join("")}</div>
+   <div class="card"><h2>Пороги проверок</h2><div class="form">${f("compaLo","Compa-ratio, нижний","0.01")}${f("compaHi","Compa-ratio, верхний","0.01")}${f("spread","Разброс по должности, %")}${f("invert","Инверсия, %")}${f("gender","Гендерный разрыв, %")}</div></div>
+  </div><div class="tools" style="margin-top:14px"><button id="resetP">Вернуть значения по умолчанию</button></div>`;
+}
+$("#t-params").addEventListener("input",e=>{
+  const t=e.target;if(t.dataset.p)S.P[t.dataset.p]=+t.value;
+  if(t.dataset.sc){const[i,j]=t.dataset.sc.split("-").map(Number);S.P.scale[i][j]=+t.value}
+  save();calc();
+});
+$("#t-params").addEventListener("click",e=>{if(e.target.id==="resetP"){S.P=JSON.parse(JSON.stringify(DEF_P));save();renderParams();calc();toast("Параметры сброшены")}});
+
+/* ---------- theme & init ---------- */
+$("#themeBtn").onclick=()=>{const d=document.documentElement,dark=d.dataset.theme?d.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;d.dataset.theme=dark?"light":"dark"};
+if(!load()){S.emps=demoData();S.demo=true;save()}
+initCalcs();show();
+</script>
+</body>
+</html>
